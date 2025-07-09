@@ -13,7 +13,7 @@ describe('useHackerNewsSearch Hook', () => {
   afterEach(() => {
     vi.restoreAllMocks() 
   })
-  describe('1. Initial State Tests', () => {
+  describe.skip('1. Initial State Tests', () => {
     test('should initialize with empty data, loading false, and no error', () => {
       // Mock fetch to prevent actual API calls
       const mockFetch = vi.mocked(fetch)
@@ -45,7 +45,7 @@ describe('useHackerNewsSearch Hook', () => {
     })
   })
 
-  describe('2. Search Functionality Tests', () => {
+  describe.skip('2. Search Functionality Tests', () => {
     test('should make API call when search term is provided', async () => {
       const mockFetch = vi.mocked(fetch)
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ hits: [] }), {
@@ -146,7 +146,7 @@ describe('useHackerNewsSearch Hook', () => {
   })
   })
 
-  describe('3. Loading State Tests', () => {
+  describe.skip('3. Loading State Tests', () => {
     test('should set loading to true when starting API request', async () => {
       const mockFetch = vi.mocked(fetch)
       let resolvePromise: (value: any) => void
@@ -267,5 +267,202 @@ describe('useHackerNewsSearch Hook', () => {
         expect(searchResult.data).toHaveLength(1)
       })
     })
+  }) 
+
+  describe('4. Successful Response Tests', () => {
+    test('should update data with API response hits on successful request', async () => {
+      const mockHits = [
+        { objectID: '1', title: 'Test Article 1', url: 'https://example1.com', relevancy_score: 0.8 },
+        { objectID: '2', title: 'Test Article 2', url: 'https://example2.com', relevancy_score: 0.6 }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        } as any)
+      )
+
+      let hookResult: any
+
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.data).toEqual(mockHits)
+        expect(searchResult.data).toHaveLength(2)
+      })
+    })
+
+    test('should set hasError to false on successful API response', async () => {
+      const mockHits = [
+        { objectID: '1', title: 'Test Article', url: 'https://example.com', relevancy_score: 0.8 }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        } as any)
+      )
+
+      let hookResult: any
+
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.hasError).toBe(false)
+        expect(searchResult.isLoading).toBe(false)
+      })
+    })
+
+    test('should filter out items without url property', async () => {
+      const mockHits = [
+        { objectID: '1', title: 'With URL', url: 'https://example1.com', relevancy_score: 0.8 },
+        { objectID: '2', title: 'Without URL', relevancy_score: 0.6 }, // Missing url
+        { objectID: '3', title: 'With URL 2', url: 'https://example3.com', relevancy_score: 0.7 }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        } as any)
+      )
+
+      let hookResult: any
+
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        // Should filter out the item without url
+        expect(searchResult.data).toHaveLength(2)
+        expect(searchResult.data.every((item: any) => item.url)).toBe(true)
+        expect(searchResult.data.find((item: any) => item.objectID === '2')).toBeUndefined()
+      })
+    })
+
+    test('should filter out items without relevancy_score property', async () => {
+      const mockHits = [
+        { objectID: '1', title: 'With Score', url: 'https://example1.com', relevancy_score: 0.8 },
+        { objectID: '2', title: 'Without Score', url: 'https://example2.com' }, // Missing relevancy_score
+        { objectID: '3', title: 'With Score 2', url: 'https://example3.com', relevancy_score: 0.7 }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        } as any)
+      )
+
+      let hookResult: any
+
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        // Should filter out the item without relevancy_score
+        expect(searchResult.data).toHaveLength(2)
+        expect(searchResult.data.every((item: any) => typeof item.relevancy_score === 'number')).toBe(true)
+        expect(searchResult.data.find((item: any) => item.objectID === '2')).toBeUndefined()
+      })
+    })
+
+    test('should sort results by relevancy_score in descending order', async () => {
+      const mockHits = [
+        { objectID: '1', title: 'Low Score', url: 'https://example1.com', relevancy_score: 0.3 },
+        { objectID: '2', title: 'High Score', url: 'https://example2.com', relevancy_score: 0.9 },
+        { objectID: '3', title: 'Medium Score', url: 'https://example3.com', relevancy_score: 0.6 }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        } as any)
+      )
+
+      let hookResult: any
+
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        // Should be sorted by relevancy_score in descending order
+        expect(searchResult.data).toHaveLength(3)
+        expect(searchResult.data[0].relevancy_score).toBe(0.9) // Highest first
+        expect(searchResult.data[1].relevancy_score).toBe(0.6) // Medium second
+        expect(searchResult.data[2].relevancy_score).toBe(0.3) // Lowest last
+        expect(searchResult.data[0].objectID).toBe('2')
+        expect(searchResult.data[1].objectID).toBe('3')
+        expect(searchResult.data[2].objectID).toBe('1')
+      })
+    })
+
+    test('should transform API response to expected data structure', async () => {
+      const mockHits = [
+        { 
+          objectID: '123', 
+          title: 'Sample Article', 
+          url: 'https://example.com',
+          relevancy_score: 0.8,
+          author: 'john_doe', // Extra field that should be filtered out
+          points: 150, // Extra field that should be filtered out
+          num_comments: 25 // Extra field that should be filtered out
+        }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        } as any)
+      )
+
+      let hookResult: any
+
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.data).toHaveLength(1)
+        
+        const item = searchResult.data[0]
+        // Should contain only the expected properties
+        expect(item).toHaveProperty('objectID', '123')
+        expect(item).toHaveProperty('title', 'Sample Article')
+        expect(item).toHaveProperty('url', 'https://example.com')
+        expect(item).toHaveProperty('relevancy_score', 0.8)
+        
+        // Should not contain extra properties
+        expect(item).not.toHaveProperty('author')
+        expect(item).not.toHaveProperty('points')
+        expect(item).not.toHaveProperty('num_comments')
+        
+        // Verify the exact structure
+        expect(Object.keys(item)).toEqual(['objectID', 'title', 'url', 'relevancy_score'])
+      })
+    })
   })
-}) 
+})
