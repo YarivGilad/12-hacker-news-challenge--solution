@@ -12,13 +12,17 @@ type HackerNewsSearchResult = {
 }
 const BASE_URL = "https://hn.algolia.com/api/v1/search?query=";
 
-export function useHackerNewsSearch(term: string): [HackerNewsSearchResult, (term: string) => void] {
+export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult, (term: string) => void] {
     const [url, setUrl] = useState(`${BASE_URL}${term}`);
     const [data, setData] = useState<NewsItem[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [hasError, setHasError] = useState<boolean>(false);
 
     useEffect(() => {
+        if (term === '') {
+            // If the term is empty, don't make an API call
+            return;
+        }
         (async () => {
             setHasError(false);
             setIsLoading(true);
@@ -37,7 +41,7 @@ export function useHackerNewsSearch(term: string): [HackerNewsSearchResult, (ter
                 setIsLoading(false);
             }
         })();
-    }, [url]);
+    }, [url, term]);
 
     function setSearchTerm(term: string) {
         setUrl(`${BASE_URL}${term}`);
