@@ -729,11 +729,19 @@ describe('useHackerNewsSearch Hook', () => {
         hookResult = renderHook(() => useHackerNewsSearch('initial'))
       })
 
-      // Rapidly change search terms
+      // Rapidly change search terms in separate acts to avoid batching
       await act(async () => {
         const [, setSearchTerm] = hookResult.result.current
         setSearchTerm('first')
+      })
+
+      await act(async () => {
+        const [, setSearchTerm] = hookResult.result.current
         setSearchTerm('second')
+      })
+
+      await act(async () => {
+        const [, setSearchTerm] = hookResult.result.current
         setSearchTerm('third')
       })
 

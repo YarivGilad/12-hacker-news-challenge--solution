@@ -25,8 +25,8 @@ export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult,
     }, [term]);
 
     useEffect(() => {
-        if (searchTerm === '') {
-            // If the term is empty, don't make an API call
+        if (!searchTerm || searchTerm === '') {
+            // If the term is empty, undefined, or null, don't make an API call
             return;
         }
         (async () => {
@@ -40,6 +40,11 @@ export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult,
                 }
                 const result = await response.json();
                 console.log(result);
+                
+                // Check if the response has hits property
+                if (!result.hits || !Array.isArray(result.hits)) {
+                    throw new Error('Invalid API response: missing hits property');
+                }
                 
                 // Filter out items without url or relevancy_score, transform to expected structure, and sort
                 const filteredAndTransformedData = result.hits
