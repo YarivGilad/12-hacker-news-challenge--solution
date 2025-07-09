@@ -29,23 +29,23 @@ Based on the requirements in `instructions.md` and the current implementation of
 
 ## Unit Test Titles
 
-### Initial State Tests
+### 1. Initial State Tests
 - "should initialize with empty data, loading false, and no error"
 - "should not make API call on initial mount with empty search term"
 
-### Search Functionality Tests
+### 2. Search Functionality Tests
 - "should make API call when search term is provided"
 - "should construct correct API URL with search term"
 - "should trigger new search when setSearchTerm is called"
 - "should update URL state when search term changes"
 
-### Loading State Tests
+### 3. Loading State Tests
 - "should set loading to true when starting API request"
 - "should set loading to false when API request completes successfully"
 - "should set loading to false when API request fails"
 - "should reset error state when starting new search"
 
-### Successful Response Tests
+### 4. Successful Response Tests
 - "should update data with API response hits on successful request"
 - "should set hasError to false on successful API response"
 - "should filter out items without url property"
@@ -53,7 +53,7 @@ Based on the requirements in `instructions.md` and the current implementation of
 - "should sort results by relevancy_score in descending order"
 - "should transform API response to expected data structure"
 
-### Error Handling Tests
+### 5. Error Handling Tests
 - "should set hasError to true when API request fails"
 - "should set hasError to true when response is not ok"
 - "should log error to console when request fails"
@@ -61,14 +61,14 @@ Based on the requirements in `instructions.md` and the current implementation of
 - "should handle network timeout errors"
 - "should handle malformed JSON responses"
 
-### Edge Cases Tests
+### 6. Edge Cases Tests
 - "should handle empty search results gracefully"
 - "should handle search term with special characters"
 - "should handle rapid consecutive search term changes"
 - "should handle undefined or null search terms"
 - "should handle API response with missing hits property"
 
-### Integration Tests
+### 7. Integration Tests
 - "should complete full search cycle from loading to data update"
 - "should handle multiple searches in sequence correctly"
 - "should maintain correct state transitions throughout search lifecycle"
