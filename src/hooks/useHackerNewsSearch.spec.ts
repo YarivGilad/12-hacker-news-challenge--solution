@@ -13,7 +13,7 @@ describe('useHackerNewsSearch Hook', () => {
   afterEach(() => {
     vi.restoreAllMocks() 
   })
-  describe.skip('1. Initial State Tests', () => {
+  describe('1. Initial State Tests', () => {
     test('should initialize with empty data, loading false, and no error', () => {
       // Mock fetch to prevent actual API calls
       const mockFetch = vi.mocked(fetch)
@@ -45,7 +45,7 @@ describe('useHackerNewsSearch Hook', () => {
     })
   })
 
-  describe.skip('2. Search Functionality Tests', () => {
+  describe('2. Search Functionality Tests', () => {
     test('should make API call when search term is provided', async () => {
       const mockFetch = vi.mocked(fetch)
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ hits: [] }), {
@@ -146,7 +146,7 @@ describe('useHackerNewsSearch Hook', () => {
   })
   })
 
-  describe.skip('3. Loading State Tests', () => {
+  describe('3. Loading State Tests', () => {
     test('should set loading to true when starting API request', async () => {
       const mockFetch = vi.mocked(fetch)
       let resolvePromise: (value: any) => void
@@ -188,7 +188,7 @@ describe('useHackerNewsSearch Hook', () => {
       mockFetch.mockImplementation(() => 
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ hits: [{ objectID: '1', title: 'Test', url: 'test.com' }] })
+          json: () => Promise.resolve({ hits: [{ objectID: '1', title: 'Test', url: 'test.com', relevancy_score: 0.8 }] })
         } as any)
       )
 
@@ -236,7 +236,7 @@ describe('useHackerNewsSearch Hook', () => {
       mockFetch.mockImplementation(() => 
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ hits: [{ objectID: '1', title: 'Test', url: 'test.com' }] })
+          json: () => Promise.resolve({ hits: [{ objectID: '1', title: 'Test', url: 'test.com', relevancy_score: 0.8 }] })
         } as any)
       )
 
@@ -269,7 +269,7 @@ describe('useHackerNewsSearch Hook', () => {
     })
   }) 
 
-  describe.skip('4. Successful Response Tests', () => {
+  describe('4. Successful Response Tests', () => {
     test('should update data with API response hits on successful request', async () => {
       const mockHits = [
         { objectID: '1', title: 'Test Article 1', url: 'https://example1.com', relevancy_score: 0.8 },
@@ -466,7 +466,7 @@ describe('useHackerNewsSearch Hook', () => {
     })
   })
 
-  describe.skip('5. Error Handling Tests', () => {
+  describe('5. Error Handling Tests', () => {
     test('should set hasError to true when network request fails', async () => {
       const mockFetch = vi.mocked(fetch)
       mockFetch.mockRejectedValue(new Error('Network error'))
@@ -817,6 +817,200 @@ describe('useHackerNewsSearch Hook', () => {
         expect(searchResult.hasError).toBe(true)
         expect(searchResult.isLoading).toBe(false)
         expect(searchResult.data).toEqual([])
+      })
+    })
+  })
+
+  describe('7. Integration Tests', () => {
+    test('should complete full search cycle from loading to data update', async () => {
+      const mockHits = [
+        { objectID: '1', title: 'React Tutorial', url: 'https://reactjs.org', relevancy_score: 0.9 },
+        { objectID: '2', title: 'Vue Guide', url: 'https://vuejs.org', relevancy_score: 0.7 }
+      ]
+
+      const mockFetch = vi.mocked(fetch)
+      let resolvePromise: (value: any) => void
+      
+      // Create a controlled promise to test the loading state
+      const controlledPromise = new Promise((resolve) => {
+        resolvePromise = resolve
+      })
+      
+      mockFetch.mockReturnValue(controlledPromise as any)
+
+      let hookResult: any
+
+      // Start the search
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      // Initial state should show loading
+      expect(hookResult.result.current[0].isLoading).toBe(true)
+      expect(hookResult.result.current[0].hasError).toBe(false)
+      expect(hookResult.result.current[0].data).toEqual([])
+
+      // Resolve the API call
+      act(() => {
+        resolvePromise({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        })
+      })
+
+      // Wait for completion and verify final state
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.isLoading).toBe(false)
+        expect(searchResult.hasError).toBe(false)
+        expect(searchResult.data).toHaveLength(2)
+        expect(searchResult.data[0].title).toBe('React Tutorial')
+        expect(searchResult.data[0].relevancy_score).toBe(0.9)
+      })
+
+      // Verify API was called with correct URL
+      expect(mockFetch).toHaveBeenCalledWith('https://hn.algolia.com/api/v1/search?query=react')
+    })
+
+    test('should handle multiple searches in sequence correctly', async () => {
+      const mockFetch = vi.mocked(fetch)
+      
+      // Mock responses for different search terms
+      const reactHits = [
+        { objectID: '1', title: 'React Docs', url: 'https://reactjs.org', relevancy_score: 0.8 }
+      ]
+      const vueHits = [
+        { objectID: '2', title: 'Vue Docs', url: 'https://vuejs.org', relevancy_score: 0.9 }
+      ]
+      const angularHits = [
+        { objectID: '3', title: 'Angular Docs', url: 'https://angular.io', relevancy_score: 0.7 }
+      ]
+
+      // Set up sequential responses
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ hits: reactHits })
+        } as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ hits: vueHits })
+        } as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ hits: angularHits })
+        } as any)
+
+      let hookResult: any
+
+      // First search
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('react'))
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.data).toHaveLength(1)
+        expect(searchResult.data[0].title).toBe('React Docs')
+      })
+
+      // Second search
+      await act(async () => {
+        const [, setSearchTerm] = hookResult.result.current
+        setSearchTerm('vue')
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.data).toHaveLength(1)
+        expect(searchResult.data[0].title).toBe('Vue Docs')
+        expect(searchResult.data[0].relevancy_score).toBe(0.9)
+      })
+
+      // Third search
+      await act(async () => {
+        const [, setSearchTerm] = hookResult.result.current
+        setSearchTerm('angular')
+      })
+
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.data).toHaveLength(1)
+        expect(searchResult.data[0].title).toBe('Angular Docs')
+        expect(searchResult.data[0].relevancy_score).toBe(0.7)
+      })
+
+      // Verify all API calls were made
+      expect(mockFetch).toHaveBeenCalledTimes(3)
+      expect(mockFetch).toHaveBeenNthCalledWith(1, 'https://hn.algolia.com/api/v1/search?query=react')
+      expect(mockFetch).toHaveBeenNthCalledWith(2, 'https://hn.algolia.com/api/v1/search?query=vue')
+      expect(mockFetch).toHaveBeenNthCalledWith(3, 'https://hn.algolia.com/api/v1/search?query=angular')
+    })
+
+    test('should maintain correct state transitions throughout search lifecycle', async () => {
+      const mockFetch = vi.mocked(fetch)
+      const mockHits = [
+        { objectID: '1', title: 'Test Article', url: 'https://test.com', relevancy_score: 0.8 }
+      ]
+
+      let resolvePromise: (value: any) => void
+      const controlledPromise = new Promise((resolve) => {
+        resolvePromise = resolve
+      })
+      
+      mockFetch.mockReturnValue(controlledPromise as any)
+
+      let hookResult: any
+      const stateHistory: Array<{ isLoading: boolean; hasError: boolean; dataLength: number }> = []
+
+      // Helper to capture state
+      const captureState = () => {
+        const [searchResult] = hookResult.result.current
+        stateHistory.push({
+          isLoading: searchResult.isLoading,
+          hasError: searchResult.hasError,
+          dataLength: searchResult.data.length
+        })
+      }
+
+      // Start search
+      await act(async () => {
+        hookResult = renderHook(() => useHackerNewsSearch('test'))
+      })
+
+      // Capture loading state
+      captureState()
+
+      // Resolve the promise
+      act(() => {
+        resolvePromise({
+          ok: true,
+          json: () => Promise.resolve({ hits: mockHits })
+        })
+      })
+
+      // Wait for completion and capture final state
+      await waitFor(() => {
+        const [searchResult] = hookResult.result.current
+        expect(searchResult.isLoading).toBe(false)
+      })
+      captureState()
+
+      // Verify state transitions
+      expect(stateHistory).toHaveLength(2)
+      
+      // Loading state
+      expect(stateHistory[0]).toEqual({
+        isLoading: true,
+        hasError: false,
+        dataLength: 0
+      })
+      
+      // Success state
+      expect(stateHistory[1]).toEqual({
+        isLoading: false,
+        hasError: false,
+        dataLength: 1
       })
     })
   })
