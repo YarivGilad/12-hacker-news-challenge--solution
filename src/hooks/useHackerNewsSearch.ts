@@ -4,6 +4,7 @@ type NewsItem = {
     objectID: string;
     title: string;
     url: string;
+    relevancy_score: number;
 }
 type HackerNewsSearchResult = {
     data: NewsItem[];
@@ -39,7 +40,19 @@ export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult,
                 }
                 const result = await response.json();
                 console.log(result);
-                setData(result.hits);
+                
+                // Filter out items without url or relevancy_score, transform to expected structure, and sort
+                const filteredAndTransformedData = result.hits
+                    .filter((item: any) => item.url && typeof item.relevancy_score === 'number')
+                    .map((item: any) => ({
+                        objectID: item.objectID,
+                        title: item.title,
+                        url: item.url,
+                        relevancy_score: item.relevancy_score
+                    }))
+                    .sort((a: NewsItem, b: NewsItem) => b.relevancy_score - a.relevancy_score);
+                
+                setData(filteredAndTransformedData);
             } catch (error) {
                 setHasError(true);
                 console.error(error);
