@@ -13,13 +13,18 @@ type HackerNewsSearchResult = {
 const BASE_URL = "https://hn.algolia.com/api/v1/search?query=";
 
 export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult, (term: string) => void] {
-    const [url, setUrl] = useState(`${BASE_URL}${term}`);
+    const [searchTerm, setSearchTerm] = useState(term);
     const [data, setData] = useState<NewsItem[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [hasError, setHasError] = useState<boolean>(false);
 
+    // Update internal search term when prop changes
     useEffect(() => {
-        if (term === '') {
+        setSearchTerm(term);
+    }, [term]);
+
+    useEffect(() => {
+        if (searchTerm === '') {
             // If the term is empty, don't make an API call
             return;
         }
@@ -27,6 +32,7 @@ export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult,
             setHasError(false);
             setIsLoading(true);
             try {
+                const url = `${BASE_URL}${searchTerm}`;
                 const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -41,12 +47,11 @@ export function useHackerNewsSearch(term: string = ''): [HackerNewsSearchResult,
                 setIsLoading(false);
             }
         })();
-    }, [url, term]);
+    }, [searchTerm]);
 
-    function setSearchTerm(term: string) {
-        setUrl(`${BASE_URL}${term}`);
+    function updateSearchTerm(newTerm: string) {
+        setSearchTerm(newTerm);
     }
 
-
-    return [{ data, isLoading, hasError }, setSearchTerm];
+    return [{ data, isLoading, hasError }, updateSearchTerm];
 }
