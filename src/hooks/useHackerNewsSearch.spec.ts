@@ -109,41 +109,41 @@ describe('useHackerNewsSearch Hook', () => {
         expect(mockFetch).toHaveBeenLastCalledWith('https://hn.algolia.com/api/v1/search?query=new-search')
       })
     })
-  test('should update URL state when search term changes', async () => {
-    const mockFetch = vi.mocked(fetch)
-    // Create a fresh mock response for each call
-    mockFetch.mockImplementation(() => 
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ hits: [] })
-      } as any)
-    )
-
-    let hookResult: any
-
-    await act(async () => {
-      hookResult = renderHook(
-        ({ term }) => useHackerNewsSearch(term),
-        { initialProps: { term: 'first' } }
+    test('should update URL state when search term changes', async () => {
+      const mockFetch = vi.mocked(fetch)
+      // Create a fresh mock response for each call
+      mockFetch.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ hits: [] })
+        } as any)
       )
-    })
 
-    // Wait for initial call
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('https://hn.algolia.com/api/v1/search?query=first')
-    })
+      let hookResult: any
 
-    // Change the search term prop
-    await act(async () => {
-      hookResult.rerender({ term: 'second' })
-    })
+      await act(async () => {
+        hookResult = renderHook(
+          ({ term }) => useHackerNewsSearch(term),
+          { initialProps: { term: 'first' } }
+        )
+      })
 
-    // Should make new call with updated term
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('https://hn.algolia.com/api/v1/search?query=second')
-      expect(mockFetch).toHaveBeenCalledTimes(2)
+      // Wait for initial call
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('https://hn.algolia.com/api/v1/search?query=first')
+      })
+
+      // Change the search term prop
+      await act(async () => {
+        hookResult.rerender({ term: 'second' })
+      })
+
+      // Should make new call with updated term
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('https://hn.algolia.com/api/v1/search?query=second')
+        expect(mockFetch).toHaveBeenCalledTimes(2)
+      })
     })
-  })
   })
 
   describe('3. Loading State Tests', () => {
